@@ -51,12 +51,7 @@ jobs:
           }
 
           # 3. 处理后续可能出现的路径或配置
-          expect {
-            "Location of the config path*" { send "\r"; exp_continue }
-            "Release channel*" { send "edge\r" }
-          }
-          
-          # 4. 剩余机型配置
+          expect "Release channel*" { send "edge\r" }
           expect "Vendor*" { send "qcom\r" }
           expect "Device codename*" { send "msm89x7\r" }
           expect "Username*" { send "user\r" }
