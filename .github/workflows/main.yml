@@ -34,39 +34,47 @@ jobs:
 
       - name: Initialize with Expect
         run: |
+          # 禁用 ANSI 颜色代码，确保 Expect 匹配的是纯文本
+          export TERM=dumb
           
           expect <<EOF
+          # 设置 15 分钟超时，给 pmaports 自动下载留足时间
           set timeout 900
+          
+          # 启动进程
           spawn pmbootstrap init
-
-          # 1. 处理 Work path (你截图中的第一个路径)
-          expect "Work path*" { 
+          
+          # 1. 处理 Work path (正则表达式匹配)
+          expect -re ".*Work path.*" { 
               send "\r" 
           }
           
-          # 2. 处理 pmaports path (你截图中的第二个路径)
-          # 直接发送回车，触发自动下载逻辑
-          expect "pmaports path*" { 
+          # 2. 处理 pmaports path (触发自动下载)
+          expect -re ".*pmaports path.*" { 
               send "\r" 
           }
 
-          # 3. 处理后续可能出现的路径或配置
-          expect "Release channel*" { send "edge\r" }
-          expect "Vendor*" { send "qcom\r" }
-          expect "Device codename*" { send "msm89x7\r" }
-          expect "Username*" { send "user\r" }
-          expect "Audio backend*" { send "pulseaudio\r" }
-          expect "WiFi backend*" { send "wpa_supplicant\r" }
-          expect "USB moded*" { send "developer\r" }
-          expect "User interface*" { send "console\r" }
-          expect "Additional options*" { send "default\r" }
-          expect "Extra packages*" { send "nano,htop,neofetch\r" }
-          expect "Timezone*" { send "Asia/Shanghai\r" }
-          expect "Hostname*" { send "qcom-msm89x7\r" }
-          expect "Build outdated*" { send "y\r" }
+          # 3. 处理后续路径或配置
+          # 使用 expect { ... } 块来处理可能多出来的路径询问，直到匹配到正式配置
+          expect -re ".*Release channel.*" { send "edge\r" }
           
+          # 4. 剩余机型配置
+          expect -re ".*Vendor.*" { send "qcom\r" }
+          expect -re ".*Device codename.*" { send "msm89x7\r" }
+          expect -re ".*Username.*" { send "user\r" }
+          expect -re ".*Audio backend.*" { send "pulseaudio\r" }
+          expect -re ".*WiFi backend.*" { send "wpa_supplicant\r" }
+          expect -re ".*USB moded.*" { send "developer\r" }
+          expect -re ".*User interface.*" { send "console\r" }
+          expect -re ".*Additional options.*" { send "default\r" }
+          expect -re ".*Extra packages.*" { send "nano,htop,neofetch\r" }
+          expect -re ".*Timezone.*" { send "Asia/Shanghai\r" }
+          expect -re ".*Hostname.*" { send "qcom-msm89x7\r" }
+          expect -re ".*Build outdated.*" { send "y\r" }
+          
+          # 5. 最后确认
           expect {
-            "Zap chroots*" { send "y\r" }
+            -re ".*Zap chroots.*" { send "y\r" }
             eof
           }
           EOF
