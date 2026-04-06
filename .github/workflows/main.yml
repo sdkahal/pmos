@@ -1,7 +1,7 @@
 name: Build postmarketOS Image
 
 on:
-  workflow_dispatch: # 手动触发构建
+  workflow_dispatch:
 
 jobs:
   build-pmos:
@@ -10,81 +10,78 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip git qemu-user-static expect kpartx
-          pip3 install --break-system-packages pmbootstrap
+          # 安装图片中提到的 kpartx 以及构建必备工具
+          sudo apt-get install -y python3 git qemu-user-static expect kpartx openssl
 
-      - name: Initialize pmbootstrap with Expect
+      - name: Setup pmbootstrap (Wiki Way)
         run: |
-          # 创建工作目录
+          # 1. 克隆仓库
+          git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git
+          
+          # 2. 创建本地 bin 目录并建立软链接
+          mkdir -p ~/.local/bin
+          ln -s "$PWD/pmbootstrap/pmbootstrap.py" ~/.local/bin/pmbootstrap
+          
+          # 3. 关键步骤：将 ~/.local/bin 加入 GitHub Action 的环境变量 PATH 中
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          
+          # 4. 验证（确保在后续 step 中能直接搜到 pmbootstrap）
+          export PATH="$HOME/.local/bin:$PATH"
+          pmbootstrap --version
+
+      - name: Initialize with Expect
+        run: |
           mkdir -p /home/runner/pmbootstrap_work
           
-          # 使用 Expect 脚本模拟图片中的 14 个交互步骤
+          # 注意：pmbootstrap init 第一次运行可能会询问源码位置
+          # 这里的 expect 脚本逻辑涵盖了你图片中的所有配置
           expect <<EOF
           set timeout 600
           spawn pmbootstrap init
 
-          # 1. 工作路径 (Work path)
-          expect "Work path*" { send "/home/runner/pmbootstrap_work\r" }
+          # 如果提示源码位置（通常是因为初次运行且未安装在标准路径）
+          expect {
+            "Location of pmbootstrap git checkout*" { 
+                send "$GITHUB_WORKSPACE/pmbootstrap\r" 
+                exp_continue 
+            }
+            "Work path*" { send "/home/runner/pmbootstrap_work\r" }
+          }
           
-          # 2. 发行版通道 (Release channel)
           expect "Release channel*" { send "edge\r" }
-          
-          # 3. 供应商 (Vendor)
           expect "Vendor*" { send "qcom\r" }
-          
-          # 4. 设备代号 (Device codename)
           expect "Device codename*" { send "msm89x7\r" }
-          
-          # 5. 用户名 (Username)
           expect "Username*" { send "user\r" }
-          
-          # 6. 音频后端 (Audio backend)
           expect "Audio backend*" { send "pulseaudio\r" }
-          
-          # 7. WiFi 后端 (WiFi backend)
           expect "WiFi backend*" { send "wpa_supplicant\r" }
-          
-          # 8. USB 模式 (USB Moded)
           expect "USB moded*" { send "developer\r" }
-          
-          # 9. 用户界面 (User Interface)
           expect "User interface*" { send "console\r" }
-          
-          # 10. 安装 Systemd (Install systemd)
           expect "Additional options*" { send "default\r" }
-          
-          # 11. 额外软件包 (Extra packages)
           expect "Extra packages*" { send "nano,htop,neofetch\r" }
-          
-          # 12. 时区 (Timezone)
           expect "Timezone*" { send "Asia/Shanghai\r" }
-          
-          # 13. 主机名 (Hostname)
           expect "Hostname*" { send "qcom-msm89x7\r" }
-          
-          # 14. 确认并完成
           expect "Build outdated*" { send "y\r" }
           
-          expect eof
+          # 处理最后的确认或 zap 提示
+          expect {
+            "Zap chroots*" { send "y\r" }
+            eof
+          }
           EOF
 
-      - name: Build and Export Image
+      - name: Build and Export
         run: |
-          # 对应图片中的构建步骤
+          # 对应图片中的执行命令
           pmbootstrap zap -hc
           pmbootstrap install --no-fde --non-interactive
           
-          # 导出镜像
           mkdir -p ./output
           pmbootstrap export --dest ./output
           
-          # 检查导出的文件
-          ls -R ./output
-
-      - name: Upload Image Artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: pmos-msm89x7-image
