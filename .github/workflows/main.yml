@@ -61,12 +61,8 @@ jobs:
                   send "user\r"
                   exp_continue
               }
-              -re ".*Audio backend.*" {
-                  send "pulseaudio\r"
-                  exp_continue
-              }
-              -re ".*WiFi backend.*" {
-                  send "wpa_supplicant\r"
+              -re ".*Provider.*" {
+                  send "\r"
                   exp_continue
               }
               -re ".*USB moded.*" {
@@ -77,28 +73,36 @@ jobs:
                   send "console\r"
                   exp_continue
               }
-              -re ".*Additional options.*" {
-                  send "default\r"
+              -re ".*Install systemd.*" {
+                  send "\r"
+                  exp_continue
+              }
+              -re ".*Change them.*" {
+                  send "\r"
                   exp_continue
               }
               -re ".*Extra packages.*" {
                   send "nano,htop,neofetch\r"
                   exp_continue
               }
-              -re ".*Timezone.*" {
+              -re ".*this timezone.*" {
                   send "Asia/Shanghai\r"
                   exp_continue
               }
-              -re ".*Hostname.*" {
-                  send "qcom-msm89x7\r"
+              -re ".*Locale.*" {
+                  send "zh_CN\r"
+                  exp_continue
+              }
+              -re ".*hostname.*" {
+                  send "\r"
                   exp_continue
               }
               -re ".*Build outdated.*" {
                   send "y\r"
                   exp_continue
               }
-              -re ".*Zap chroots.*" {
-                  send "y\r"
+              -re ".*Zap existing.*" {
+                  send "\r"
                   exp_continue
               }
               eof
@@ -107,8 +111,7 @@ jobs:
 
       - name: Build and Export
         run: |
-          pmbootstrap zap -hc
-          pmbootstrap install --no-fde --non-interactive
+          pmbootstrap install
           mkdir -p ./output
           pmbootstrap export --dest ./output
 
