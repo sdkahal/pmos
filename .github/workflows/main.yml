@@ -45,7 +45,7 @@ jobs:
                   send "\r"
                   exp_continue
               }
-              -re ".*Channel.*\\[edge\\].*" {
+              -re ".*Channel.*" {
                   send "\r"
                   exp_continue
               }
