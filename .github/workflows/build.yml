@@ -110,11 +110,11 @@ jobs:
       - name: Build and Export
         run: |
           pmbootstrap install --password 12345
-          mkdir -p ./output
-          pmbootstrap export --output ./output
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: pmos-msm89x7-image
-          path: ./output/*.img
+          path: |
+            ~/.local/var/pmbootstrap/chroot_native/home/pmos/rootfs/*.img
+            ~/.local/var/pmbootstrap/chroot_rootfs_qcom-msm89x7/boot/*.img
