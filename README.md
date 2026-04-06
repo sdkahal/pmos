@@ -1,0 +1,2 @@
+# pmos
+build postmarketOS
