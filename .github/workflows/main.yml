@@ -13,83 +13,105 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          # 安装图片中提到的 kpartx 以及构建必备工具
           sudo apt-get install -y python3 git qemu-user-static expect kpartx openssl
 
       - name: Setup pmbootstrap (Wiki Way)
         run: |
-          # 1. 克隆仓库
           git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git
-          
-          # 2. 创建本地 bin 目录并建立软链接
           mkdir -p ~/.local/bin
           ln -s "$PWD/pmbootstrap/pmbootstrap.py" ~/.local/bin/pmbootstrap
-          
-          # 3. 关键步骤：将 ~/.local/bin 加入 GitHub Action 的环境变量 PATH 中
           echo "$HOME/.local/bin" >> $GITHUB_PATH
-          
-          # 4. 验证（确保在后续 step 中能直接搜到 pmbootstrap）
           export PATH="$HOME/.local/bin:$PATH"
           pmbootstrap --version
 
-      - name: Initialize with Expect
+      - name: Initialize with Expect (Robust CI Version)
         run: |
-          # 禁用 ANSI 颜色代码，确保 Expect 匹配的是纯文本
           export TERM=dumb
-          
-          expect <<EOF
+          export NO_COLOR=1
+
+          expect <<'EOF'
           exp_internal 1
           log_user 1
-          # 设置 15 分钟超时，给 pmaports 自动下载留足时间
           set timeout 900
-          
-          # 启动进程
-          spawn pmbootstrap init
-          
-          # 1. 处理 Work path (正则表达式匹配)
-          expect -re ".*Work path.*" { 
-              send "\r" 
-          }
-          
-          # 2. 处理 pmaports path (触发自动下载)
-          expect -re ".*pmaports path.*" { 
-              send "\r" 
-          }
 
-          # 3. 处理后续路径或配置
-          # 使用 expect { ... } 块来处理可能多出来的路径询问，直到匹配到正式配置
-          expect -re ".*Release channel.*" { send "edge\r" }
-          
-          # 4. 剩余机型配置
-          expect -re ".*Vendor.*" { send "qcom\r" }
-          expect -re ".*Device codename.*" { send "msm89x7\r" }
-          expect -re ".*Username.*" { send "user\r" }
-          expect -re ".*Audio backend.*" { send "pulseaudio\r" }
-          expect -re ".*WiFi backend.*" { send "wpa_supplicant\r" }
-          expect -re ".*USB moded.*" { send "developer\r" }
-          expect -re ".*User interface.*" { send "console\r" }
-          expect -re ".*Additional options.*" { send "default\r" }
-          expect -re ".*Extra packages.*" { send "nano,htop,neofetch\r" }
-          expect -re ".*Timezone.*" { send "Asia/Shanghai\r" }
-          expect -re ".*Hostname.*" { send "qcom-msm89x7\r" }
-          expect -re ".*Build outdated.*" { send "y\r" }
-          
-          # 5. 最后确认
+          spawn stdbuf -oL pmbootstrap init
+
           expect {
-            -re ".*Zap chroots.*" { send "y\r" }
-            eof
+              -re ".*Work path.*" {
+                  send "\r"
+                  exp_continue
+              }
+              -re ".*pmaports.*" {
+                  send "\r"
+                  exp_continue
+              }
+              -re ".*Release channel.*" {
+                  send "edge\r"
+                  exp_continue
+              }
+              -re ".*Vendor.*" {
+                  send "qcom\r"
+                  exp_continue
+              }
+              -re ".*Device codename.*" {
+                  send "msm89x7\r"
+                  exp_continue
+              }
+              -re ".*Username.*" {
+                  send "user\r"
+                  exp_continue
+              }
+              -re ".*Audio backend.*" {
+                  send "pulseaudio\r"
+                  exp_continue
+              }
+              -re ".*WiFi backend.*" {
+                  send "wpa_supplicant\r"
+                  exp_continue
+              }
+              -re ".*USB moded.*" {
+                  send "developer\r"
+                  exp_continue
+              }
+              -re ".*User interface.*" {
+                  send "console\r"
+                  exp_continue
+              }
+              -re ".*Additional options.*" {
+                  send "default\r"
+                  exp_continue
+              }
+              -re ".*Extra packages.*" {
+                  send "nano,htop,neofetch\r"
+                  exp_continue
+              }
+              -re ".*Timezone.*" {
+                  send "Asia/Shanghai\r"
+                  exp_continue
+              }
+              -re ".*Hostname.*" {
+                  send "qcom-msm89x7\r"
+                  exp_continue
+              }
+              -re ".*Build outdated.*" {
+                  send "y\r"
+                  exp_continue
+              }
+              -re ".*Zap chroots.*" {
+                  send "y\r"
+                  exp_continue
+              }
+              eof
           }
           EOF
 
       - name: Build and Export
         run: |
-          # 对应图片中的执行命令
           pmbootstrap zap -hc
           pmbootstrap install --no-fde --non-interactive
-          
           mkdir -p ./output
           pmbootstrap export --dest ./output
-          
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
