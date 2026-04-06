@@ -1,0 +1,117 @@
+name: Build postmarketOS Image
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-pmos:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 git qemu-user-static expect kpartx openssl
+
+      - name: Setup pmbootstrap (Wiki Way)
+        run: |
+          git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git
+          mkdir -p ~/.local/bin
+          ln -s "$PWD/pmbootstrap/pmbootstrap.py" ~/.local/bin/pmbootstrap
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.local/bin:$PATH"
+          pmbootstrap --version
+
+      - name: Initialize with Expect (Robust CI Version)
+        run: |
+          export TERM=dumb
+          export NO_COLOR=1
+
+          expect <<'EOF'
+          set timeout 900
+
+          spawn stdbuf -oL pmbootstrap init
+
+          expect {
+              -re ".*Work path.*" {
+                  send "\r"
+                  exp_continue
+              }
+              -re ".*pmaports.*" {
+                  send "\r"
+                  exp_continue
+              }
+              -re ".*Release channel.*" {
+                  send "edge\r"
+                  exp_continue
+              }
+              -re ".*Vendor.*" {
+                  send "qcom\r"
+                  exp_continue
+              }
+              -re ".*Device codename.*" {
+                  send "msm89x7\r"
+                  exp_continue
+              }
+              -re ".*Username.*" {
+                  send "user\r"
+                  exp_continue
+              }
+              -re ".*Audio backend.*" {
+                  send "pulseaudio\r"
+                  exp_continue
+              }
+              -re ".*WiFi backend.*" {
+                  send "wpa_supplicant\r"
+                  exp_continue
+              }
+              -re ".*USB moded.*" {
+                  send "developer\r"
+                  exp_continue
+              }
+              -re ".*User interface.*" {
+                  send "console\r"
+                  exp_continue
+              }
+              -re ".*Additional options.*" {
+                  send "default\r"
+                  exp_continue
+              }
+              -re ".*Extra packages.*" {
+                  send "nano,htop,neofetch\r"
+                  exp_continue
+              }
+              -re ".*Timezone.*" {
+                  send "Asia/Shanghai\r"
+                  exp_continue
+              }
+              -re ".*Hostname.*" {
+                  send "qcom-msm89x7\r"
+                  exp_continue
+              }
+              -re ".*Build outdated.*" {
+                  send "y\r"
+                  exp_continue
+              }
+              -re ".*Zap chroots.*" {
+                  send "y\r"
+                  exp_continue
+              }
+              eof
+          }
+          EOF
+
+      - name: Build and Export
+        run: |
+          pmbootstrap zap -hc
+          pmbootstrap install --no-fde --non-interactive
+          mkdir -p ./output
+          pmbootstrap export --dest ./output
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pmos-msm89x7-image
+          path: ./output/*.img
