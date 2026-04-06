@@ -38,6 +38,8 @@ jobs:
           export TERM=dumb
           
           expect <<EOF
+          exp_internal 1
+          log_user 1
           # 设置 15 分钟超时，给 pmaports 自动下载留足时间
           set timeout 900
           
