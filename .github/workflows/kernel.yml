@@ -124,43 +124,23 @@ jobs:
           }
           EOF
 
-      - name: Apply Kernel Patch and Config
+      - name: Prepare Kernel Source
         run: |
-          PKG_NAME="linux-postmarketos-qcom-msm89x7"
-          WORK=$(pmbootstrap config work)
-
-          KERNEL_PKG_PATH=$(find "$WORK/cache_git/pmaports" -type d -name "$PKG_NAME" | head -n1)
-
-          if [ -z "$KERNEL_PKG_PATH" ]; then
-            echo "Kernel package path not found"
-            exit 1
-          fi
-
-          CONF_TARGET="config-postmarketos-qcom-msm89x7.aarch64"
-
-          cd "$KERNEL_PKG_PATH"
-
+          git clone --depth=1 https://github.com/msm89x7-mainline/linux.git kernel_src
+          
+          cd kernel_src
           if [ -f "$GITHUB_WORKSPACE/patches/wifi-fix.patch" ]; then
-            cp "$GITHUB_WORKSPACE/patches/wifi-fix.patch" ./
-            grep -q "wifi-fix.patch" APKBUILD || \
-            sed -i 's|source="|source="wifi-fix.patch |' APKBUILD
+            git apply "$GITHUB_WORKSPACE/patches/wifi-fix.patch"
             echo "Successfully applied wifi-fix.patch"
-          else
-            echo "Error: wifi-fix.patch not found"
-            exit 1
           fi
 
-          echo "Updating kernel config: $CONF_TARGET"
           if [ -f "$GITHUB_WORKSPACE/patches/config_new.txt" ]; then
-            cp "$GITHUB_WORKSPACE/patches/config_new.txt" "./$CONF_TARGET"
-            echo "Successfully applied config_new.txt"
+            cp "$GITHUB_WORKSPACE/patches/config_new.txt" arch/arm64/configs/pmos_defconfig
+            echo "Successfully applied config_new.txt as pmos_defconfig"
           else
             echo "Error: config_new.txt not found"
-            ls -R $GITHUB_WORKSPACE/patches/
             exit 1
           fi
-
-          pmbootstrap checksum $PKG_NAME
 
       - name: Compile Kernel
         run: |
