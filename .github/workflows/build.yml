@@ -120,6 +120,7 @@ jobs:
 
       - name: Build and Export
         run: |
+          pmbootstrap build linux-postmarketos-qcom-msm89x7 --force
           pmbootstrap install --password 12345
 
       - name: Upload Artifact
