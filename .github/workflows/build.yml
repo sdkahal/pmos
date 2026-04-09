@@ -115,17 +115,22 @@ jobs:
 
           cd $KERNEL_PKG_PATH
 
-          cp $GITHUB_WORKSPACE/patches/wifi-fix.patch ./
-
-          if ! grep -q "wifi-fix.patch" APKBUILD; then
-            sed -i '/source="/a \	wifi-fix.patch' APKBUILD
+          if [ -f "$GITHUB_WORKSPACE/patches/wifi-fix.patch" ]; then
+            cp "$GITHUB_WORKSPACE/patches/wifi-fix.patch" ./
+            grep -q "wifi-fix.patch" APKBUILD || sed -i '/source="/a \	wifi-fix.patch' APKBUILD
+            echo "Successfully applied wifi-fix.patch"
+          else
+            echo "Error: wifi-fix.patch not found in $GITHUB_WORKSPACE/patches/"
+            exit 1
           fi
 
           echo "Updating kernel config: $CONF_TARGET"
-          if [ -f "$GITHUB_WORKSPACE/config_new.txt" ]; then
-            cp "$GITHUB_WORKSPACE/config_new.txt" "./$CONF_TARGET"
+          if [ -f "$GITHUB_WORKSPACE/patches/config_new.txt" ]; then
+            cp "$GITHUB_WORKSPACE/patches/config_new.txt" "./$CONF_TARGET"
+            echo "Successfully applied config_new.txt"
           else
-            echo "Error: config_new.txt not found in workspace!"
+            echo "Error: config_new.txt not found in $GITHUB_WORKSPACE/patches/"
+            ls -R $GITHUB_WORKSPACE/patches/
             exit 1
           fi
 
