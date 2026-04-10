@@ -150,9 +150,10 @@ jobs:
       - name: Compile Kernel
         run: |
           cd kernel_src
-          pmbootstrap -v build --envkernel linux-postmarketos-qcom-msm89x7 --force --run-sh "
-            make msm89x7_defconfig && make -j$(nproc)
-          "
+          pmbootstrap -v build --envkernel linux-postmarketos-qcom-msm89x7 -- \
+            sh -c "make msm89x7_defconfig"
+          pmbootstrap -v build --envkernel linux-postmarketos-qcom-msm89x7 -- \
+            sh -c "make -j$(nproc)"
 
       - name: Package APK
         run: |
