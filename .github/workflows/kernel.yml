@@ -154,7 +154,7 @@ jobs:
           touch .scmversion
 
           expect <<EOF
-          set timeout 1800
+          set timeout 3600
           spawn bash --login
 
           send "source ./envkernel.sh\r"
