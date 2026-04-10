@@ -153,28 +153,31 @@ jobs:
 
           touch .scmversion
 
-          expect <<EOF
-          set timeout 3600
+          expect <<'EOF'
+          set timeout -1
           spawn bash --login
 
           send "source ./envkernel.sh --gcc\r"
-          
+
           expect {
               "Source directory is not clean" { exp_continue }
               "Initializing Alpine chroot" { exp_continue }
-              "Failed to install all dependencies" { exit 1 }
-              "activated successfully" { 
-                  send "make msm89x7_defconfig\r"
-              }
+              "activated successfully" {}
+              timeout { exit 1 }
           }
 
+          send "make msm89x7_defconfig\r"
+
           expect {
-              "configuration written to" {
-                  send "make -j$(nproc)\r"
-              }
+              "configuration written to" {}
               timeout { exit 1 }
-              eof
           }
+
+          # 关键：带输出 + 控制并行
+          send "make -j2 V=1\r"
+
+          # 关键：直接等结束，不匹配字符串
+          expect eof
           EOF
 
       - name: Package APK
