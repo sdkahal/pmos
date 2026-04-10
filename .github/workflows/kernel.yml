@@ -15,7 +15,7 @@ on:
       set_kernel_localversion:
         description: "kernel_localversion"
         required: true
-        default: "-msm8937"
+        default: "-msm89x7"
 
 env:
   TZ: Asia/Shanghai
