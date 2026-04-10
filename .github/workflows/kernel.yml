@@ -1,10 +1,10 @@
-name: Use pmbootstrap Complie Kernel
+name: Use pmbootstrap Compile Kernel
 
 on:
   workflow_dispatch:
 
 jobs:
-  complie-kernel:
+  compile-kernel:
     runs-on: ubuntu-latest
 
     steps:
@@ -159,7 +159,8 @@ jobs:
       - name: Compile Kernel
         run: |
           cd kernel_src
-          pmbootstrap run-sh -- "cd /mnt/linux && make msm89x7_defconfig && make -j$(nproc)"
+          pmbootstrap chroot --user -- \
+            sh -c "cd /mnt/linux && make msm89x7_defconfig && make -j$(nproc)"
 
       - name: Package APK
         run: |
