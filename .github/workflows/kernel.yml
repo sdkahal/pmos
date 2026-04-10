@@ -113,26 +113,26 @@ jobs:
 
           # 生成 .PKGINFO (确保内部无多余空格)
           cat > $KERNEL_DIR/.PKGINFO <<EOF
-pkgname = linux-msm89x7
-pkgver = ${KVER}
-pkgrel = 0
-arch = aarch64
-pkgdesc = msm89x7 kernel for postmarketOS
-license = GPL-2.0
-origin = linux-msm89x7
-builddate = $(date +%s)
-EOF
+          pkgname = linux-msm89x7
+          pkgver = ${KVER}
+          pkgrel = 0
+          arch = aarch64
+          pkgdesc = msm89x7 kernel for postmarketOS
+          license = GPL-2.0
+          origin = linux-msm89x7
+          builddate = $(date +%s)
+          EOF
 
           cat > $MODULES_DIR/.PKGINFO <<EOF
-pkgname = linux-msm89x7-modules
-pkgver = ${KVER}
-pkgrel = 0
-arch = aarch64
-pkgdesc = msm89x7 kernel modules
-license = GPL-2.0
-origin = linux-msm89x7
-builddate = $(date +%s)
-EOF
+          pkgname = linux-msm89x7-modules
+          pkgver = ${KVER}
+          pkgrel = 0
+          arch = aarch64
+          pkgdesc = msm89x7 kernel modules
+          license = GPL-2.0
+          origin = linux-msm89x7
+          builddate = $(date +%s)
+          EOF
 
           # 打包产物 (强制 UID 为 0)
           cd /workdir
