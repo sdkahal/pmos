@@ -1,0 +1,87 @@
+name: Build postmarketOS (Manual Debug Support)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-pmos:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3 git qemu-user-static kpartx openssl \
+            sudo wget curl rsync build-essential \
+            fakeroot bison flex device-tree-compiler \
+            ccache e2fsprogs dosfstools parted
+
+      - name: Enable binfmt and loop devices
+        run: |
+          sudo modprobe loop || true
+          sudo losetup -f || true
+          sudo update-binfmts --enable || true
+
+      - name: Setup pmbootstrap
+        run: |
+          git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git
+          mkdir -p ~/.local/bin
+          ln -s "$PWD/pmbootstrap/pmbootstrap.py" ~/.local/bin/pmbootstrap
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.local/bin:$PATH"
+          pmbootstrap --version
+
+      - name: Interactive Setup Session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
+          timeout-minutes: 30
+
+      - name: Apply Kernel Patch and Config
+        run: |
+          PKG_NAME="linux-postmarketos-qcom-msm89x7"
+          WORK=$(pmbootstrap config work)
+          KERNEL_PKG_PATH=$(find "$WORK/cache_git/pmaports" -type d -name "$PKG_NAME" | head -n1)
+
+          if [ -z "$KERNEL_PKG_PATH" ]; then
+            echo "Kernel package path not found"
+            exit 1
+          fi
+
+          CONF_TARGET="config-postmarketos-qcom-msm89x7.aarch64"
+          cd "$KERNEL_PKG_PATH"
+
+          if [ -f "$GITHUB_WORKSPACE/patches/wifi-fix.patch" ]; then
+            cp "$GITHUB_WORKSPACE/patches/wifi-fix.patch" ./
+            grep -q "wifi-fix.patch" APKBUILD || \
+            sed -i 's|source="|source="wifi-fix.patch |' APKBUILD
+          fi
+
+          if [ -f "$GITHUB_WORKSPACE/patches/config_new.txt" ]; then
+            cp "$GITHUB_WORKSPACE/patches/config_new.txt" "./$CONF_TARGET"
+          fi
+
+          pmbootstrap checksum $PKG_NAME
+
+      - name: Build (verbose compile)
+        run: |
+          unset CI
+          export USE_CCACHE=1
+          export MAKEFLAGS="V=1 -j2"
+          pmbootstrap -v build linux-postmarketos-qcom-msm89x7 --force
+          
+      - name: Export Image
+        run: |
+          pmbootstrap install --password 12345
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pmos-msm89x7-image
+          path: |
+            ~/.local/var/pmbootstrap/chroot_native/home/pmos/rootfs/*.img
+            ~/.local/var/pmbootstrap/chroot_rootfs_qcom-msm89x7/boot/*.img
