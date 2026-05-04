@@ -45,7 +45,7 @@ jobs:
         run: |
           export TERM=dumb
           export NO_COLOR=1
-          printf '\n\n\nqcom\nmsm89x7\nuser\n\ndeveloper\nconsole\n\n\nnano,htop,neofetch\n\nzh_CN\n\ny\n\n' | pmbootstrap init --shallow-initial-clone
+          printf '\n\n\nqcom\nmsm89x7\nuser\n\n\ndeveloper\nconsole\n\n\nnano,htop,neofetch\n\nzh_CN\n\ny\n\n' | pmbootstrap init --shallow-initial-clone
           pmbootstrap status
 
       - name: Apply Kernel Patch and Config
