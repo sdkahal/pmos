@@ -15,8 +15,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            python3 git qemu-user-static expect kpartx openssl \
-            sudo wget curl rsync \
+            python3 git qemu-user-static kpartx openssl \
+            sudo wget curl rsync procps \
             build-essential \
             fakeroot \
             bison flex \
@@ -41,88 +41,30 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           pmbootstrap --version
 
-      - name: Initialize with Expect
+      - name: Initialize pmbootstrap
         run: |
           export TERM=dumb
           export NO_COLOR=1
+          pmbootstrap init --shallow-initial-clone <<'EOF'
 
-          expect <<'EOF'
-          set timeout 900
 
-          spawn stdbuf -oL pmbootstrap init
 
-          expect {
-              -re ".*Work path.*" {
-                  send "\r"
-                  exp_continue
-              }
-              -re ".pmaports.*path.*" {
-                  send "\r"
-                  exp_continue
-              }
-              -re ".*Channel.*" {
-                  send "\r"
-                  exp_continue
-              }
-              -re ".*Vendor.*" {
-                  send "qcom\r"
-                  exp_continue
-              }
-              -re ".*Device codename.*" {
-                  send "msm89x7\r"
-                  exp_continue
-              }
-              -re ".*Username.*" {
-                  send "user\r"
-                  exp_continue
-              }
-              -re ".*Provider.*" {
-                  send "\r"
-                  exp_continue
-              }
-              -re ".*USB moded.*" {
-                  send "developer\r"
-                  exp_continue
-              }
-              -re ".*User interface.*" {
-                  send "console\r"
-                  exp_continue
-              }
-              -re ".*Install systemd.*" {
-                  send "\r"
-                  exp_continue
-              }
-              -re ".*Change them.*" {
-                  send "\r"
-                  exp_continue
-              }
-              -re ".*Extra packages.*" {
-                  send "nano,htop,neofetch\r"
-                  exp_continue
-              }
-              -re ".*this timezone.*" {
-                  send "\r"
-                  exp_continue
-              }
-              -re ".*Locale.*" {
-                  send "zh_CN\r"
-                  exp_continue
-              }
-              -re ".*hostname.*" {
-                  send "\r"
-                  exp_continue
-              }
-              -re ".*Build outdated.*" {
-                  send "y\r"
-                  exp_continue
-              }
-              -re ".*Zap existing.*" {
-                  send "\r"
-                  exp_continue
-              }
-              eof
-          }
-          EOF
+qcom
+msm89x7
+user
+
+developer
+console
+
+
+nano,htop,neofetch
+
+zh_CN
+
+y
+
+EOF
+          pmbootstrap status
 
       - name: Apply Kernel Patch and Config
         run: |
@@ -166,18 +108,22 @@ jobs:
         run: |
           unset CI
           export USE_CCACHE=1
-          export MAKEFLAGS="V=1 -j2"
 
-          pmbootstrap -v build linux-postmarketos-qcom-msm89x7 --force
-          
-      - name: Export Image
+          pmbootstrap -v -j2 build linux-postmarketos-qcom-msm89x7 --force
+
+      - name: Install and Export Image
         run: |
           pmbootstrap install --password 12345
+          pmbootstrap export --no-install -- /tmp/pmos-export
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: pmos-msm89x7-image
           path: |
-            ~/.local/var/pmbootstrap/chroot_native/home/pmos/rootfs/*.img
-            ~/.local/var/pmbootstrap/chroot_rootfs_qcom-msm89x7/boot/*.img
+            /tmp/pmos-export/*.img
+
+      - name: Cleanup
+        if: always()
+        run: |
+          pmbootstrap shutdown || true

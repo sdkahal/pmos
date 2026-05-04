@@ -1,0 +1,18 @@
+# 技术文档（本地参考用，不 push）
+pmbootstrap_usage_tech_doc.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# 临时文件
+*.tmp
+*.log
