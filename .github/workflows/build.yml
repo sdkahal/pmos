@@ -45,70 +45,42 @@ jobs:
         run: |
           export TERM=dumb
           export NO_COLOR=1
-          pmbootstrap init --shallow-initial-clone <<'EOF'
-
-
-
-qcom
-msm89x7
-user
-
-developer
-console
-
-
-nano,htop,neofetch
-
-zh_CN
-
-y
-
-EOF
+          printf '\n\n\nqcom\nmsm89x7\nuser\n\ndeveloper\nconsole\n\n\nnano,htop,neofetch\n\nzh_CN\n\ny\n\n' | pmbootstrap init --shallow-initial-clone
           pmbootstrap status
 
       - name: Apply Kernel Patch and Config
         run: |
           PKG_NAME="linux-postmarketos-qcom-msm89x7"
           WORK=$(pmbootstrap config work)
-
           KERNEL_PKG_PATH=$(find "$WORK/cache_git/pmaports" -type d -name "$PKG_NAME" | head -n1)
-
           if [ -z "$KERNEL_PKG_PATH" ]; then
             echo "Kernel package path not found"
             exit 1
           fi
-
           CONF_TARGET="config-postmarketos-qcom-msm89x7.aarch64"
-
           cd "$KERNEL_PKG_PATH"
-
           if [ -f "$GITHUB_WORKSPACE/patches/wifi-fix.patch" ]; then
             cp "$GITHUB_WORKSPACE/patches/wifi-fix.patch" ./
-            grep -q "wifi-fix.patch" APKBUILD || \
-            sed -i 's|source="|source="wifi-fix.patch |' APKBUILD
+            grep -q "wifi-fix.patch" APKBUILD || sed -i 's|source="|source="wifi-fix.patch |' APKBUILD
             echo "Successfully applied wifi-fix.patch"
           else
             echo "Error: wifi-fix.patch not found"
             exit 1
           fi
-
           echo "Updating kernel config: $CONF_TARGET"
           if [ -f "$GITHUB_WORKSPACE/patches/config_new.txt" ]; then
             cp "$GITHUB_WORKSPACE/patches/config_new.txt" "./$CONF_TARGET"
             echo "Successfully applied config_new.txt"
           else
             echo "Error: config_new.txt not found"
-            ls -R $GITHUB_WORKSPACE/patches/
             exit 1
           fi
-
           pmbootstrap checksum $PKG_NAME
 
-      - name: Build (verbose compile)
+      - name: Build kernel
         run: |
           unset CI
           export USE_CCACHE=1
-
           pmbootstrap -v -j2 build linux-postmarketos-qcom-msm89x7 --force
 
       - name: Install and Export Image
